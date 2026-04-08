@@ -1,0 +1,21 @@
+# privete files
+config/
+.env
+logs/
+fetched_emails.json
+
+# Python environment and cache
+venv/
+.venv
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Testing
+.pytest_cache/
+
+# IDE and system files
+.vscode/
+.idea/
+.DS_Store
