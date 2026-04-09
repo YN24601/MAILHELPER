@@ -3,6 +3,7 @@ config/
 .env
 logs/
 fetched_emails.json
+todos.txt
 
 # Python environment and cache
 venv/

@@ -39,6 +39,13 @@ class EmailClient:
         try:
             self.imap = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
             self.imap.login(self.email_address, self.password)
+
+            #---- ID command to prevent trash emails for some servers ----
+            imaplib.Commands['ID'] = ('AUTH') 
+            args = ("name", "MailHelper", "version", "1.0.0", "vendor", "my-python-app")
+            self.imap._command("ID", '("' + '" "'.join(args) + '")')
+            #-------------------------------------------------------------
+
             self.is_connected = True
             logger.info(f"Successfully connected to {self.email_address}")
             return True
@@ -107,9 +114,10 @@ class EmailClient:
 
         try:
             # Select the mailbox
-            status, _ = self.imap.select(mailbox, readonly=True)
+            status, _ = self.imap.select(mailbox, readonly=False) # readonly=False to mark emails as read when fetched
             if status != "OK":
                 logger.warning(f"Could not select mailbox {mailbox}")
+                logger.warning(f"Available mailboxes: {self.get_mailboxes()}")
                 return []
 
             # Build search criteria - fetch only unread emails
@@ -130,7 +138,7 @@ class EmailClient:
 
             emails = []
             for email_id in email_list:
-                status, msg_data = self.imap.fetch(email_id, "(RFC822)")
+                status, msg_data = self.imap.fetch(email_id, "(RFC822)") 
                 if status == "OK":
                     email_dict = self._parse_email(msg_data[0][1])
                     if email_dict:

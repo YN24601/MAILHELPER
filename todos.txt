@@ -1,8 +1,14 @@
 记录：
 gmail成功fetch
+163成功fetch（需要id）
+实现已读功能
+            status, _ = self.imap.select(mailbox, readonly=True) # readonly=False to mark emails as read when fetched
 
 
 TODO：
-执行fetch下载邮件内容后应该自动标记为已读？确认一下，实现已读功能
-测试其他邮箱
+测试其他邮箱 学校邮箱和gmx邮箱
 AI分析模块
+
+
+备份：
+【mailboxes.json】

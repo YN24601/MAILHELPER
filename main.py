@@ -71,7 +71,7 @@ def main():
     # Fetch unread emails from INBOX
     logger.info("Fetching unread emails from INBOX...")
     settings = config.get("settings", {})
-    fetch_limit = settings.get("fetch_limit", 20)
+    fetch_limit = settings.get("fetch_limit", 50)
 
     all_emails = manager.get_unread_emails(mailbox="INBOX", limit=fetch_limit)
 
