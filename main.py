@@ -1,13 +1,22 @@
 """
-Main script to fetch emails from multiple mailboxes
+Main script to fetch emails from multiple mailboxes and analyze with AI.
 """
 
 import json
 import logging
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from mail_helper import MailboxManager
+from mail_helper.analysis_models import AnalysisConfig
+from mail_helper.email_pipeline import EmailPipeline
+from mail_helper.report_generator import ReportGenerator
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -34,6 +43,60 @@ def load_config(config_file: str) -> dict:
     except json.JSONDecodeError:
         logger.error(f"Invalid JSON in config file: {config_file}")
         return None
+
+
+def _analyze_emails(all_emails: dict, settings: dict) -> None:
+    """Analyze fetched emails using AI."""
+    try:
+        # Collect all emails into a single list, preserving mailbox info
+        emails_to_analyze = []
+        for email_address, emails in all_emails.items():
+            for email in emails:
+                email['mailbox'] = email_address
+            emails_to_analyze.extend(emails)
+        
+        if not emails_to_analyze:
+            logger.warning("No emails to analyze")
+            return
+        
+        # Save emails to temporary file for analysis
+        temp_file = "temp_emails_for_analysis.json"
+        with open(temp_file, 'w', encoding='utf-8') as f:
+            json.dump(emails_to_analyze, f, ensure_ascii=False, indent=2)
+        
+        # Initialize analysis config
+        api_key = os.getenv('API_KEY')
+        if not api_key:
+            logger.error("API_KEY environment variable not set")
+            return
+        
+        config = AnalysisConfig(
+            model=settings.get('llm_model'),
+            temperature=settings.get('llm_temperature', 0.7),
+            api_key=api_key
+        )
+        
+        # Run pipeline
+        pipeline = EmailPipeline(config)
+        results = pipeline.process_email_file(
+            temp_file,
+            output_file=settings.get('analysis_output', 'analysis_results.json')
+        )
+        
+        # Generate report
+        report = ReportGenerator.generate_report(
+            results,
+            output_file=settings.get('report_output', 'email_analysis_report.md')
+        )
+        
+        logger.info(f"Analysis complete. Generated report with {len(results)} analyzed emails")
+        
+        # Clean up temp file
+        Path(temp_file).unlink(missing_ok=True)
+        
+    except Exception as e:
+        logger.error(f"Analysis failed: {str(e)}")
+
 
 
 def main():
@@ -99,6 +162,11 @@ def main():
     if settings.get("save_emails", False):
         output_file = settings.get("output_file", "fetched_emails.json")
         manager.save_emails_to_file(all_emails, output_file)
+
+    # AI analysis if enabled
+    if settings.get("enable_analysis", False):
+        logger.info("\nStarting AI email analysis...")
+        _analyze_emails(all_emails, settings)
 
     # Cleanup
     logger.info("\nDisconnecting from all mailboxes...")

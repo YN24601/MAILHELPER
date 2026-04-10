@@ -3,7 +3,10 @@ config/
 .env
 logs/
 fetched_emails.json
+fetched_emails_test.json
 todos.txt
+analysis_report.json
+email_report.markdown
 
 # Python environment and cache
 venv/

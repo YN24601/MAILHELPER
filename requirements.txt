@@ -1,2 +1,2 @@
-# pipreqs . --encoding=utf8 --force
+litellm==1.83.4
 python-dotenv==1.2.2
