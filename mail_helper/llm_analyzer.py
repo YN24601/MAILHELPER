@@ -47,7 +47,7 @@ class BaseLLMAnalyzer(ABC):
         "actions_to_take": ["action1", "action2"]
     }""").strip()
 
-        raw_prompt = os.getenv("ANALYSIS_PROMPT", default_template)
+        raw_prompt = self.config.prompt_template or default_template
         
         # use Template to substitute email_text while keeping JSON structure intact
         return Template(raw_prompt).safe_substitute(email_text=email_text)

@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 def load_config(config_file: str) -> dict:
     """Load mailbox configuration from JSON file."""
     try:
-        with open(config_file, "r") as f:
+        with open(config_file, "r", encoding='utf-8') as f:
             config = json.load(f)
         return config
     except FileNotFoundError:
@@ -72,8 +72,10 @@ def _analyze_emails(all_emails: dict, settings: dict) -> None:
         
         config = AnalysisConfig(
             model=settings.get('llm_model'),
-            temperature=settings.get('llm_temperature', 0.7),
-            api_key=api_key
+            temperature=settings.get('llm_temperature'),
+            max_tokens=settings.get('llm_max_tokens'),
+            prompt_template=settings.get('analysis_prompt_template'),
+            api_key=api_key,
         )
         
         # Run pipeline

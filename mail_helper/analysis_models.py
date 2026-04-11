@@ -46,4 +46,5 @@ class AnalysisConfig:
     model: str
     temperature: float = 0.7
     max_tokens: int = 500
+    prompt_template: str = ""
     api_key: str = None
