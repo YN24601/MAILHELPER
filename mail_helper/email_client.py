@@ -193,7 +193,7 @@ class EmailClient:
                 "to": to_addr,
                 "date": date_str,
                 "body": body,
-                "html": html_body,
+                "html_body": html_body,
             }
 
         except Exception as e:

@@ -5,6 +5,7 @@ Text preprocessing module for email content.
 import re
 from typing import Tuple
 from html.parser import HTMLParser
+from bs4 import BeautifulSoup
 
 
 class HTMLStripper(HTMLParser):
@@ -26,15 +27,31 @@ class TextProcessor:
 
     @staticmethod
     def strip_html(html_content: str) -> str:
-        """Remove HTML tags and entities."""
+        """Remove HTML tags and entities using BeautifulSoup."""
         if not html_content:
             return ""
-        stripper = HTMLStripper()
         try:
-            stripper.feed(html_content)
-            return stripper.get_data()
+            # Use BeautifulSoup to parse HTML and extract text
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Remove script and style elements
+            for script in soup(["script", "style"]):
+                script.decompose()
+            
+            # Get text content
+            text = soup.get_text()
+            
+            # Clean up whitespace
+            text = re.sub(r'\s+', ' ', text)
+            return text.strip()
         except Exception:
-            return html_content
+            # Fallback to old method if BeautifulSoup fails
+            stripper = HTMLStripper()
+            try:
+                stripper.feed(html_content)
+                return stripper.get_data()
+            except Exception:
+                return html_content
 
     @staticmethod
     def clean_text(text: str) -> str:

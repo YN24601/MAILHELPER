@@ -3,6 +3,7 @@ Mailbox manager module for managing multiple email accounts
 """
 
 import logging
+import json
 from typing import List, Dict, Optional
 from datetime import datetime
 from .email_client import EmailClient
@@ -130,8 +131,6 @@ class MailboxManager:
         Returns:
             bool: True if save was successful
         """
-        import json
-
         try:
             with open(filename, "w", encoding="utf-8") as f:
                 json.dump(emails, f, indent=2, default=str)

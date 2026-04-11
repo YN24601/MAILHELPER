@@ -62,7 +62,7 @@ class EmailPipeline:
                         
             # Preprocess text
             prepared_text = TextProcessor.prepare_for_analysis(email_data)
-            
+            logger.debug(f"Prepared text for analysis: {prepared_text}...") 
             # Analyze with LLM
             result = self.analyzer.analyze(prepared_text, subject, mailbox)
             
