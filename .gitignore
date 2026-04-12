@@ -1,5 +1,5 @@
 # privete files
-config/
+config/mailboxes.json
 .env
 logs/
 fetched_emails.json

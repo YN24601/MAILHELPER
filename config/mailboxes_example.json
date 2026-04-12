@@ -1,0 +1,29 @@
+{
+  "mailboxes": [
+    {
+      "email": "youremail1@gmail.com",
+      "password": "yourpassword",
+      "imap_server": "imap.gmail.com",
+      "imap_port": 993
+    },
+    {
+      "email": "youremail2@gmail.com",
+      "password": "yourpassword",
+      "imap_server": "imap.gmail.com",
+      "imap_port": 993
+    }
+  ],
+  "settings": {
+    "log_level": "INFO",
+    "fetch_limit": 50,
+    "save_emails": true,
+    "output_file": "fetched_emails.json",
+    "enable_analysis": true,
+    "llm_model": "your-llm-model",
+    "llm_temperature": 0.7,
+    "llm_max_tokens": 500,
+    "analysis_prompt_template": "You are an efficient email assistant. Please analyze the following email content and extract information as required. Email content:\n$email_text\n\nTask requirements:\n1. Summary: Provide a concise summary in 1-3 sentences.\n2. Priority: Assess priority (high/medium/low). Emails from professors, urgent projects, or with deadlines are high; emails from classmates or routine replies are medium; advertisements and notifications are low.\n3. Category: Classify as work/school/personal/other.\n4. Actions: List follow-up actions for high-priority emails. If none, return an empty list [].\n\nMust return in strict JSON format without any extra explanatory text:\n{\n  \"summary\": \"...\",\n  \"priority\": \"high/medium/low\",\n  \"category\": \"work/school/personal/other\",\n  \"actions_to_take\": [\"action1\", \"action2\"]\n}",
+    "analysis_output": "analysis_report.json",
+    "report_output": "email_report.markdown"
+  }
+}
