@@ -6,7 +6,7 @@ import logging
 from typing import List
 from pathlib import Path
 
-from mail_helper.analysis_models import EmailAnalysisResult
+from mail_helper.analysis_models import EmailAnalysisResult, Priority, Category
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +33,10 @@ class ReportGenerator:
         if not results:
             report = "# Email Analysis Report\n\nNo emails to analyze.\n"
         else:
-            # Sort results if requested
+            # Sort results if requested (by enum declaration order: high -> low)
             if sort_by_priority:
-                priority_order = {'high': 0, 'medium': 1, 'low': 2}
-                results = sorted(results, key=lambda r: priority_order.get(r.priority.value, 3))
+                priority_order = {p.value: i for i, p in enumerate(Priority)}
+                results = sorted(results, key=lambda r: priority_order.get(r.priority.value, len(priority_order)))
             
             report = ReportGenerator._build_report(results)
         
@@ -106,8 +106,8 @@ class ReportGenerator:
     def _calculate_stats(results: List[EmailAnalysisResult]) -> dict:
         """Calculate summary statistics."""
         stats = {
-            'by_priority': {'high': 0, 'medium': 0, 'low': 0},
-            'by_category': {'work': 0, 'school': 0, 'personal': 0, 'other': 0},
+            'by_priority': {p.value: 0 for p in Priority},
+            'by_category': {c.value: 0 for c in Category},
             'by_mailbox': {},
         }
         

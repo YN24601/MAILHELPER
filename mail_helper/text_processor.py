@@ -4,22 +4,16 @@ Text preprocessing module for email content.
 
 import re
 from typing import Tuple
-from html.parser import HTMLParser
 from bs4 import BeautifulSoup
 
-
-class HTMLStripper(HTMLParser):
-    """Strip HTML tags from content."""
-    def __init__(self):
-        super().__init__()
-        self.reset()
-        self.fed = []
-
-    def handle_data(self, data):
-        self.fed.append(data)
-
-    def get_data(self):
-        return ''.join(self.fed)
+# Precompiled patterns (reused across every email instead of recompiling per call)
+_WHITESPACE = re.compile(r'\s+')
+_SIGNATURE_PATTERNS = [
+    re.compile(r'--+\s*[\s\S]*', re.IGNORECASE),  # Lines starting with dashes
+    re.compile(r'Best regards[\s\S]*', re.IGNORECASE),
+    re.compile(r'Thanks[\s\S]*', re.IGNORECASE),
+    re.compile(r'Sent from.*', re.IGNORECASE),
+]
 
 
 class TextProcessor:
@@ -31,27 +25,17 @@ class TextProcessor:
         if not html_content:
             return ""
         try:
-            # Use BeautifulSoup to parse HTML and extract text
+            # html.parser is pure-stdlib and does not raise on malformed HTML
             soup = BeautifulSoup(html_content, 'html.parser')
-            
+
             # Remove script and style elements
             for script in soup(["script", "style"]):
                 script.decompose()
-            
-            # Get text content
+
             text = soup.get_text()
-            
-            # Clean up whitespace
-            text = re.sub(r'\s+', ' ', text)
-            return text.strip()
+            return _WHITESPACE.sub(' ', text).strip()
         except Exception:
-            # Fallback to old method if BeautifulSoup fails
-            stripper = HTMLStripper()
-            try:
-                stripper.feed(html_content)
-                return stripper.get_data()
-            except Exception:
-                return html_content
+            return html_content
 
     @staticmethod
     def clean_text(text: str) -> str:
@@ -60,17 +44,11 @@ class TextProcessor:
             return ""
 
         # Remove extra whitespace
-        text = re.sub(r'\s+', ' ', text)
-        
+        text = _WHITESPACE.sub(' ', text)
+
         # Remove common email signatures
-        signature_patterns = [
-            r'--+\s*[\s\S]*',  # Lines starting with dashes
-            r'Best regards[\s\S]*',
-            r'Thanks[\s\S]*',
-            r'Sent from.*',
-        ]
-        for pattern in signature_patterns:
-            text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+        for pattern in _SIGNATURE_PATTERNS:
+            text = pattern.sub('', text)
 
         return text.strip()
 
@@ -78,13 +56,9 @@ class TextProcessor:
     def extract_plain_text(email_data: dict) -> Tuple[str, str]:
         """Extract plain text from email (subject + body)."""
         subject = email_data.get('subject', '')
-        
-        # Try to get body from different possible fields
-        body = email_data.get('body', '')
-        if not body:
-            body = email_data.get('text', '')
-        if not body:
-            body = email_data.get('html_body', '')
+
+        # Try body fields in order of preference
+        body = email_data.get('body') or email_data.get('text') or email_data.get('html_body') or ''
 
         # Strip HTML if present
         body = TextProcessor.strip_html(body)

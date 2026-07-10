@@ -9,7 +9,7 @@ from pathlib import Path
 
 from mail_helper.analysis_models import EmailAnalysisResult, AnalysisConfig
 from mail_helper.text_processor import TextProcessor
-from mail_helper.llm_analyzer import AnalyzerFactory
+from mail_helper.llm_analyzer import LLMAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -19,39 +19,54 @@ class EmailPipeline:
 
     def __init__(self, config: AnalysisConfig):
         self.config = config
-        self.analyzer = AnalyzerFactory.get_analyzer(config)
+        self.analyzer = LLMAnalyzer(config)
         self.results: List[EmailAnalysisResult] = []
 
-    def process_email_file(self, input_file: str, output_file: str = None) -> List[EmailAnalysisResult]:
-        """Process all emails from a JSON file.
-        
+    def process_emails(self, emails: List[dict], output_file: str = None) -> List[EmailAnalysisResult]:
+        """Analyze a list of email dicts and optionally save the results.
+
         Args:
-            input_file: Path to JSON file with fetched emails
+            emails: Fetched emails as dicts (each may carry a 'mailbox' field)
             output_file: Optional path to save results
-            
+
         Returns:
             List of analysis results
         """
         self.results = []
-        
         try:
-            emails = self._load_emails(input_file)
             logger.info(f"Processing {len(emails)} emails")
-            
+
             for email_data in emails:
                 result = self._process_single_email(email_data)
                 if result:
                     self.results.append(result)
-            
+
             if output_file:
                 self._save_results(output_file)
-            
+
             logger.info(f"Successfully analyzed {len(self.results)} emails")
             return self.results
-            
+
         except Exception as e:
             logger.error(f"Pipeline error: {str(e)}")
             return []
+
+    def process_email_file(self, input_file: str, output_file: str = None) -> List[EmailAnalysisResult]:
+        """Process all emails from a JSON file.
+
+        Args:
+            input_file: Path to JSON file with fetched emails
+            output_file: Optional path to save results
+
+        Returns:
+            List of analysis results
+        """
+        try:
+            emails = self._load_emails(input_file)
+        except Exception as e:
+            logger.error(f"Pipeline error: {str(e)}")
+            return []
+        return self.process_emails(emails, output_file)
 
     def _process_single_email(self, email_data: dict) -> Optional[EmailAnalysisResult]:
         """Process a single email through the analysis pipeline."""
@@ -107,34 +122,6 @@ class EmailPipeline:
                 json.dump(results_data, f, ensure_ascii=False, indent=2)
             
             logger.info(f"Results saved to {output_file}")
-            
+
         except Exception as e:
             logger.error(f"Error saving results: {str(e)}")
-
-    def get_results_by_priority(self, priority: str) -> List[EmailAnalysisResult]:
-        """Filter results by priority level."""
-        return [r for r in self.results if r.priority.value == priority]
-
-    def get_results_by_category(self, category: str) -> List[EmailAnalysisResult]:
-        """Filter results by category."""
-        return [r for r in self.results if r.category.value == category]
-
-    def get_summary_stats(self) -> dict:
-        """Get summary statistics of analysis results."""
-        if not self.results:
-            return {}
-        
-        return {
-            'total_emails': len(self.results),
-            'by_priority': {
-                'high': len(self.get_results_by_priority('high')),
-                'medium': len(self.get_results_by_priority('medium')),
-                'low': len(self.get_results_by_priority('low')),
-            },
-            'by_category': {
-                'work': len(self.get_results_by_category('work')),
-                'school': len(self.get_results_by_category('school')),
-                'personal': len(self.get_results_by_category('personal')),
-                'other': len(self.get_results_by_category('other')),
-            }
-        }

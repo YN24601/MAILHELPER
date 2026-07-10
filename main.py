@@ -6,7 +6,6 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -21,7 +20,6 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    # level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.FileHandler("logs/mail_helper.log", encoding='utf-8'),
@@ -59,12 +57,7 @@ def _analyze_emails(all_emails: dict, settings: dict) -> None:
         if not emails_to_analyze:
             logger.warning("No emails to analyze")
             return
-        
-        # Save emails to temporary file for analysis
-        temp_file = "temp_emails_for_analysis.json"
-        with open(temp_file, 'w', encoding='utf-8') as f:
-            json.dump(emails_to_analyze, f, ensure_ascii=False, indent=2)
-        
+
         # Initialize analysis config
         api_key = os.getenv('API_KEY')
         if not api_key:
@@ -79,27 +72,23 @@ def _analyze_emails(all_emails: dict, settings: dict) -> None:
             api_key=api_key,
         )
         
-        # Run pipeline
+        # Run pipeline directly on the in-memory emails
         pipeline = EmailPipeline(config)
-        results = pipeline.process_email_file(
-            temp_file,
+        results = pipeline.process_emails(
+            emails_to_analyze,
             output_file=settings.get('analysis_output', 'analysis_results.json')
         )
-        
+
         # Generate report
         report = ReportGenerator.generate_report(
             results,
             output_file=settings.get('report_output', 'email_analysis_report.md')
         )
-        
+
         logger.info(f"Analysis complete. Generated report with {len(results)} analyzed emails")
-        
-        # Clean up temp file
-        Path(temp_file).unlink(missing_ok=True)
-        
+
     except Exception as e:
         logger.error(f"Analysis failed: {str(e)}")
-
 
 
 def main():
