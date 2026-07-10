@@ -14,20 +14,27 @@ from mail_helper.analysis_models import EmailAnalysisResult, Priority, Category,
 logger = logging.getLogger(__name__)
 
 # Built once at import instead of per-email in the analysis hot path
-_DEFAULT_PROMPT_TEMPLATE = dedent("""Analyze the following email and provide:
-    1. A concise summary (1-3 sentences)
-    2. Priority level (high, medium, or low)
-    3. Category (work, school, personal, or other)
-    4. Specific actions to take (as a list)
+_DEFAULT_PROMPT_TEMPLATE = dedent("""You are an efficient email assistant. The email below includes the sender (From), date (Date), subject (Subject) and body (Body); analyze it using all four.
 
     Email content:
     $email_text
 
-    Respond in JSON format:
+    When assigning priority, combine the sender's identity with how urgent the content is. Apply these rules from top to bottom and stop at the first match:
+    - high: sender is a professor/advisor/teaching assistant, or an official notice from your school or company; or the body contains a clear deadline, an interview, a bill/payment, or an account-security alert that you must handle promptly yourself.
+    - medium: routine correspondence from classmates, colleagues or friends, or messages that need a reply but are not urgent; general course/project updates.
+    - low: advertisements, marketing, subscription digests, social-media notifications, or automated system notices that need no action from you.
+    When unsure: if the sender looks like a real personal address, use medium; if it looks automated or bulk (e.g. no-reply, newsletter, notifications), use low.
+
+    Other requirements:
+    1. summary: summarize the email in 1-3 concise sentences.
+    2. category: classify as work/school/personal/other.
+    3. actions_to_take: list concrete follow-up actions only for high priority; otherwise return an empty list [].
+
+    Return strict JSON only, where priority must be exactly one of high, medium, low and category must be exactly one of work, school, personal, other, with no extra explanatory text:
     {
         "summary": "...",
-        "priority": "high|medium|low",
-        "category": "work|school|personal|other",
+        "priority": "high",
+        "category": "school",
         "actions_to_take": ["action1", "action2"]
     }""").strip()
 

@@ -70,15 +70,22 @@ class TextProcessor:
 
     @staticmethod
     def prepare_for_analysis(email_data: dict) -> str:
-        """Prepare email content for LLM analysis."""
+        """Prepare email content for LLM analysis.
+
+        Sender and date are the strongest priority signals, so the header
+        (From/Date/Subject) is placed before the body and never truncated —
+        only the body is trimmed to stay within the length budget.
+        """
         subject, body = TextProcessor.extract_plain_text(email_data)
-        
-        # Combine subject and body with clear separation
-        prepared_text = f"Subject: {subject}\n\nBody: {body}"
-        
-        # Limit length to avoid excessive token usage
+        sender = email_data.get('from', '')
+        date = email_data.get('date', '')
+
+        header = f"From: {sender}\nDate: {date}\nSubject: {subject}"
+
+        # Limit total length to avoid excessive token usage, trimming the body only
         max_chars = 2000
-        if len(prepared_text) > max_chars:
-            prepared_text = prepared_text[:max_chars] + "..."
-        
-        return prepared_text
+        budget = max(0, max_chars - len(header) - len("\n\nBody: "))
+        if len(body) > budget:
+            body = body[:budget] + "..."
+
+        return f"{header}\n\nBody: {body}"
