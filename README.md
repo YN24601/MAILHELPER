@@ -7,6 +7,15 @@ MailHelper is a smart email assistant that fetches unread emails from multiple m
 - `config/mailboxes.json` - mailbox configuration file.
 - `.env` - environment variables such as `API_KEY`.
 
+To analyze an existing fetch without connecting to any mailbox, run:
+
+```bash
+conda run -n myenv python main.py --analyze-file fetched_emails.json
+```
+
+references:
+    set up gmail password: https://support.google.com/accounts/answer/185833
+
 
 ## Output Files
 

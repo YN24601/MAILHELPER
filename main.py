@@ -5,7 +5,10 @@ Main script to fetch emails from multiple mailboxes and analyze with AI.
 import json
 import logging
 import os
+import argparse
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -17,15 +20,28 @@ from mail_helper.report_generator import ReportGenerator
 # Load environment variables
 load_dotenv()
 
+
+def _configure_logging() -> None:
+    """Create the log path and configure file and console logging."""
+    log_file = Path("logs") / "mail_helper.log"
+
+    try:
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    except FileNotFoundError as error:
+        raise RuntimeError(
+            f"Unable to create log file directory: {log_file.parent}"
+        ) from error
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[file_handler, logging.StreamHandler()],
+    )
+
+
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("logs/mail_helper.log", encoding='utf-8'),
-        logging.StreamHandler(),
-    ],
-)
+_configure_logging()
 
 logger = logging.getLogger(__name__)
 
@@ -91,13 +107,53 @@ def _analyze_emails(all_emails: dict, settings: dict) -> None:
         logger.error(f"Analysis failed: {str(e)}")
 
 
-def main():
+def _analyze_email_file(input_file: str, settings: dict) -> None:
+    """Clean and analyze emails from an existing fetched email file."""
+    try:
+        api_key = os.getenv('API_KEY')
+        if not api_key:
+            logger.error("API_KEY environment variable not set")
+            return
+
+        config = AnalysisConfig(
+            model=settings.get('llm_model'),
+            temperature=settings.get('llm_temperature'),
+            max_tokens=settings.get('llm_max_tokens'),
+            prompt_template=settings.get('analysis_prompt_template'),
+            api_key=api_key,
+        )
+
+        pipeline = EmailPipeline(config)
+        results = pipeline.process_email_file(
+            input_file,
+            output_file=settings.get('analysis_output', 'analysis_results.json'),
+        )
+
+        ReportGenerator.generate_report(
+            results,
+            output_file=settings.get('report_output', 'email_analysis_report.md'),
+        )
+        logger.info(
+            f"Analysis complete. Generated report with {len(results)} analyzed emails"
+        )
+
+    except Exception as e:
+        logger.error(f"Analysis failed: {str(e)}")
+
+
+def main(analyze_file: Optional[str] = None):
     """Main function to fetch emails from multiple mailboxes."""
 
     # Load configuration
     config = load_config("config/mailboxes.json")
     if not config:
         logger.error("Failed to load configuration. Please check config/mailboxes.json")
+        return
+
+    settings = config.get("settings", {})
+
+    if analyze_file:
+        _analyze_email_file(analyze_file, settings)
         return
 
     # Initialize mailbox manager
@@ -125,7 +181,6 @@ def main():
 
     # Fetch unread emails from INBOX
     logger.info("Fetching unread emails from INBOX...")
-    settings = config.get("settings", {})
     fetch_limit = settings.get("fetch_limit", 50)
 
     all_emails = manager.get_unread_emails(mailbox="INBOX", limit=fetch_limit)
@@ -167,4 +222,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Fetch and analyze mailbox emails")
+    parser.add_argument(
+        "--analyze-file",
+        metavar="PATH",
+        help="Analyze an existing fetched email JSON file without connecting to IMAP",
+    )
+    args = parser.parse_args()
+    main(args.analyze_file)

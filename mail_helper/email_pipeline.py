@@ -97,11 +97,27 @@ class EmailPipeline:
             with open(input_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            # Support both list and dict with 'emails' key
+            # Support a flat list, a dict with an 'emails' key, or the
+            # mailbox-to-emails mapping produced by the fetch flow.
             if isinstance(data, list):
                 return data
             elif isinstance(data, dict) and 'emails' in data:
                 return data['emails']
+            elif isinstance(data, dict):
+                emails = []
+                for mailbox, mailbox_emails in data.items():
+                    if not isinstance(mailbox_emails, list):
+                        raise ValueError("Invalid mailbox email list")
+
+                    for email_data in mailbox_emails:
+                        if not isinstance(email_data, dict):
+                            raise ValueError("Invalid email data")
+
+                        normalized_email = dict(email_data)
+                        normalized_email.setdefault('mailbox', mailbox)
+                        emails.append(normalized_email)
+
+                return emails
             else:
                 raise ValueError("Invalid JSON format")
                 
